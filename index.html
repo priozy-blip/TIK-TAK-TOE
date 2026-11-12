@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<title>TIK TAK TOE</title>
+<style>
+  :root {
+    --bg: #101827;
+    --panel: #192438;
+    --panel2: #22314a;
+    --text: #f5f7fb;
+    --muted: #aab6c9;
+    --cyan: #5eead4;
+    --pink: #fb7185;
+    --gold: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100svh; padding: 24px 16px;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at top, #263957 0%, var(--bg) 60%);
+    color: var(--text); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .app { width: min(100%, 460px); text-align: center; }
+  .eyebrow { color: var(--cyan); font-size: .76rem; letter-spacing: .24em; font-weight: 800; }
+  h1 { margin: 7px 0 4px; font-size: clamp(2.5rem, 12vw, 4rem); line-height: 1; letter-spacing: -.06em; }
+  .subtitle { color: var(--muted); margin: 10px 0 24px; font-size: .95rem; }
+  .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .mode, .action {
+    border: 1px solid #40516c; border-radius: 13px; padding: 12px 10px;
+    background: var(--panel); color: var(--muted); font-weight: 700;
+  }
+  .mode.active { background: var(--cyan); border-color: var(--cyan); color: #092321; }
+  .status {
+    background: var(--panel); border: 1px solid #2c3b54; border-radius: 16px;
+    padding: 15px; margin-bottom: 14px; display: flex; align-items: center; justify-content: center;
+    gap: 9px; min-height: 58px; font-weight: 750;
+  }
+  .status .mark { font-size: 1.35rem; color: var(--cyan); }
+  .board {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    padding: 12px; background: #0b1220; border-radius: 20px;
+    border: 1px solid #2c3b54; box-shadow: 0 18px 45px #0005;
+  }
+  .cell {
+    aspect-ratio: 1; border: 0; border-radius: 14px; background: var(--panel2);
+    color: var(--text); font-size: clamp(3rem, 17vw, 5rem); font-weight: 850;
+    line-height: 1; display: grid; place-items: center; transition: transform .12s, background .12s;
+  }
+  .cell:active { transform: scale(.96); }
+  .cell.x { color: var(--cyan); }
+  .cell.o { color: var(--pink); }
+  .cell.winner { background: #3c4b36; outline: 2px solid var(--gold); }
+  .cell:disabled { cursor: default; opacity: 1; }
+  .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin: 16px 0; }
+  .score { background: var(--panel); border: 1px solid #2c3b54; border-radius: 14px; padding: 12px 5px; }
+  .score strong { display: block; font-size: 1.55rem; }
+  .score span { display: block; color: var(--muted); font-size: .75rem; margin-top: 2px; }
+  .score.x strong { color: var(--cyan); }
+  .score.o strong { color: var(--pink); }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .action.primary { background: var(--cyan); color: #092321; border-color: var(--cyan); }
+  .action:active, .mode:active { transform: translateY(1px); }
+  .hint { color: var(--muted); font-size: .78rem; margin: 19px 0 0; }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+  @media (max-width: 360px) { body { padding: 18px 12px; } .board { gap: 7px; padding: 9px; } }
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="eyebrow">THE CLASSIC GAME</div>
+  <h1>TIK TAK TOE</h1>
+  <p class="subtitle">Three in a row. Outsmart your opponent.</p>
+
+  <div class="mode-switch" aria-label="Game mode">
+    <button class="mode active" id="twoPlayer">2 Players</button>
+    <button class="mode" id="computer">Vs Computer</button>
+  </div>
+
+  <div class="status" id="status" aria-live="polite">
+    <span class="mark">X</span><span id="statusText">Player X's turn</span>
+  </div>
+
+  <section class="board" id="board" aria-label="Tic Tac Toe board">
+    <button class="cell" data-index="0" aria-label="Empty square 1"></button>
+    <button class="cell" data-index="1" aria-label="Empty square 2"></button>
+    <button class="cell" data-index="2" aria-label="Empty square 3"></button>
+    <button class="cell" data-index="3" aria-label="Empty square 4"></button>
+    <button class="cell" data-index="4" aria-label="Empty square 5"></button>
+    <button class="cell" data-index="5" aria-label="Empty square 6"></button>
+    <button class="cell" data-index="6" aria-label="Empty square 7"></button>
+    <button class="cell" data-index="7" aria-label="Empty square 8"></button>
+    <button class="cell" data-index="8" aria-label="Empty square 9"></button>
+  </section>
+
+  <section class="scores" aria-label="Scoreboard">
+    <div class="score x"><strong id="xScore">0</strong><span>PLAYER X</span></div>
+    <div class="score"><strong id="drawScore">0</strong><span>DRAWS</span></div>
+    <div class="score o"><strong id="oScore">0</strong><span id="oLabel">PLAYER O</span></div>
+  </section>
+
+  <div class="actions">
+    <button class="action primary" id="newRound">New Round</button>
+    <button class="action" id="reset">Reset Scores</button>
+  </div>
+  <p class="hint">Player X goes first · Get 3 marks in a line to win</p>
+</main>
+
+<script>
+(() => {
+  const cells = [...document.querySelectorAll('.cell')];
+  const statusText = document.getElementById('statusText');
+  const statusMark = document.querySelector('.status .mark');
+  const twoPlayerBtn = document.getElementById('twoPlayer');
+  const computerBtn = document.getElementById('computer');
+  const oLabel = document.getElementById('oLabel');
+  const winningLines = [
+    [0,1,2], [3,4,5], [6,7,8],
+    [0,3,6], [1,4,7], [2,5,8],
+    [0,4,8], [2,4,6]
+  ];
+  let board = Array(9).fill('');
+  let current = 'X';
+  let mode = 'two';
+  let finished = false;
+  let scores = { X: 0, O: 0, draw: 0 };
+
+  function winnerFor(state) {
+    for (const line of winningLines) {
+      const [a,b,c] = line;
+      if (state[a] && state[a] === state[b] && state[a] === state[c]) {
+        return { player: state[a], line };
+      }
+    }
+    return null;
+  }
+
+  function render() {
+    cells.forEach((cell, i) => {
+      cell.textContent = board[i];
+      cell.className = 'cell' + (board[i] ? ' ' + board[i].toLowerCase() : '');
+      cell.disabled = finished || !!board[i] || (mode === 'cpu' && current === 'O');
+      cell.setAttribute('aria-label', board[i] ? `Square ${i+1}: ${board[i]}` : `Empty square ${i+1}`);
+    });
+    document.getElementById('xScore').textContent = scores.X;
+    document.getElementById('oScore').textContent = scores.O;
+    document.getElementById('drawScore').textContent = scores.draw;
+    if (!finished) {
+      statusMark.textContent = current;
+      statusMark.style.color = current === 'X' ? 'var(--cyan)' : 'var(--pink)';
+      statusText.textContent = mode === 'cpu' && current === 'O' ? "Computer's turn" :
+        (mode === 'cpu' ? "Your turn (X)" : `Player ${current}'s turn`);
+    }
+  }
+
+  function finishRound() {
+    const result = winnerFor(board);
+    if (result) {
+      finished = true;
+      scores[result.player]++;
+      result.line.forEach(i => cells[i].classList.add('winner'));
+      statusMark.textContent = '★';
+      statusMark.style.color = 'var(--gold)';
+      statusText.textContent = mode === 'cpu'
+        ? (result.player === 'X' ? 'You win! 🎉' : 'Computer wins!')
+        : `Player ${result.player} wins! 🎉`;
+    } else if (board.every(Boolean)) {
+      finished = true;
+      scores.draw++;
+      statusMark.textContent = '＝';
+      statusMark.style.color = 'var(--gold)';
+      statusText.textContent = "It's a draw!";
+    }
+    render();
+  }
+
+  function play(index) {
+    if (finished || board[index] || (mode === 'cpu' && current === 'O')) return;
+    board[index] = current;
+    if (winnerFor(board) || board.every(Boolean)) {
+      finishRound();
+      return;
+    }
+    current = current === 'X' ? 'O' : 'X';
+    render();
+    if (mode === 'cpu' && current === 'O') {
+      window.setTimeout(computerMove, 300);
+    }
+  }
+
+  // Minimax makes the computer unbeatable.
+  function minimax(state, isMaximizing) {
+    const result = winnerFor(state);
+    if (result) return result.player === 'O' ? 10 : -10;
+    if (state.every(Boolean)) return 0;
+    let best = isMaximizing ? -Infinity : Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (!state[i]) {
+        state[i] = isMaximizing ? 'O' : 'X';
+        const score = minimax(state, !isMaximizing);
+        state[i] = '';
+        best = isMaximizing ? Math.max(best, score) : Math.min(best, score);
+      }
+    }
+    return best;
+  }
+
+  function computerMove() {
+    if (finished || mode !== 'cpu' || current !== 'O') return;
+    let bestScore = -Infinity, bestMove = -1;
+    for (let i = 0; i < 9; i++) {
+      if (!board[i]) {
+        board[i] = 'O';
+        const score = minimax(board, false);
+        board[i] = '';
+        if (score > bestScore) { bestScore = score; bestMove = i; }
+      }
+    }
+    if (bestMove !== -1) {
+      board[bestMove] = 'O';
+      if (winnerFor(board) || board.every(Boolean)) finishRound();
+      else { current = 'X'; render(); }
+    }
+  }
+
+  function newRound() {
+    board = Array(9).fill('');
+    current = 'X';
+    finished = false;
+    render();
+  }
+
+  function setMode(nextMode) {
+    mode = nextMode;
+    twoPlayerBtn.classList.toggle('active', mode === 'two');
+    computerBtn.classList.toggle('active', mode === 'cpu');
+    oLabel.textContent = mode === 'cpu' ? 'COMPUTER' : 'PLAYER O';
+    newRound();
+  }
+
+  cells.forEach(cell => cell.addEventListener('click', () => play(Number(cell.dataset.index))));
+  twoPlayerBtn.addEventListener('click', () => setMode('two'));
+  computerBtn.addEventListener('click', () => setMode('cpu'));
+  document.getElementById('newRound').addEventListener('click', newRound);
+  document.getElementById('reset').addEventListener('click', () => {
+    scores = { X: 0, O: 0, draw: 0 };
+    newRound();
+  });
+  render();
+})();
+</script>
+</body>
+</html>
